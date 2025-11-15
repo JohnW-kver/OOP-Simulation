@@ -18,6 +18,10 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
@@ -72,6 +76,27 @@ public class PhysicsController implements Initializable {
     // Timing variables for physics updates
     private long lastUpdateTime = 0;
 
+    @FXML
+    private TextField angleField;
+
+    @FXML
+    private Button launchButton;
+
+    @FXML
+    private Button resetButton;
+
+    @FXML
+    private Label speedLabel;
+
+    @FXML
+    private Slider speedSlider;
+
+    @FXML
+    private Label massLabel;
+
+    @FXML
+    private Slider massSlider;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         System.out.println("PhysicsController initialized!");
@@ -90,7 +115,7 @@ public class PhysicsController implements Initializable {
         createGround();
 
         // Step 4: Set up mouse interaction
-        setupMouseInteraction();
+        setupUIControls();
 
         // Step 5: Draw the initial state
         render();
@@ -197,9 +222,37 @@ public class PhysicsController implements Initializable {
     /**
      * Sets up mouse interaction to create balls when clicking on the canvas
      */
-    private void setupMouseInteraction() {
+    private void setupUIControls() {
         canvas.setOnMouseClicked(this::onCanvasClicked);
-        System.out.println("Mouse interaction set up - click on canvas to create balls!");
+        speedSlider.valueProperty().addListener(
+                (observable, oldValue, newValue) -> {
+                    speedLabel.setText(String.format("%.1f m/s", newValue.doubleValue()));
+                });
+        massSlider.valueProperty().addListener(
+                (observable, oldValue, newValue) -> {
+                    massLabel.setText(String.format("%.1f kg", newValue.doubleValue()));
+                });
+        launchButton.setOnAction(event -> launchProjectile());
+    }
+
+    private void launchProjectile() {
+        double speed = speedSlider.getValue();
+        String angleString = angleField.getText().trim();
+        try {
+            double angle = Double.parseDouble(angleString);
+
+            double angleRadians = Math.toRadians(angle);
+            double vx = speed * Math.cos(angleRadians);
+            double vy = speed * Math.sin(angleRadians);
+
+            for (Body ball : balls) {
+                ball.setLinearVelocity(vx, vy);
+            }
+
+        } catch (NumberFormatException e) {
+            System.out.println(e.getMessage());
+        }
+
     }
 
     /**
