@@ -4,6 +4,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.Vector;
 
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
@@ -86,6 +87,15 @@ public class PhysicsController implements Initializable {
     private Label speedLabel;
 
     @FXML
+    private Label labelHeight;
+
+    @FXML
+    private Label labelRange;
+
+    @FXML
+    private Label labelDroppedRange;
+
+    @FXML
     private Slider speedSlider;
 
     @FXML
@@ -99,6 +109,9 @@ public class PhysicsController implements Initializable {
 
     private double projectileStartX = -8;
     private double projectileStartY = 0;
+    private Double landedRange = null;
+    private static final double LANDED_SPEED_THRESHOLD = 0.1;
+    private static final double LANDED_HEIGHT_TOLERANCE = 0.02;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -298,6 +311,29 @@ public class PhysicsController implements Initializable {
 
         // Draw the ground
         drawGround(gc);
+
+        Vector2 position = projectile.getTransform().getTranslation();
+        double groundTop = GROUND_Y_POSITION + (GROUND_HEIGHT / 2.0);
+        double height = Math.max(0.0, position.y - groundTop - BALL_RADIUS);
+        double range = Math.max(0.0, position.x - projectileStartX);
+
+        labelHeight.setText(String.format(("%.2f m"), height));
+        labelRange.setText(String.format(("%.2f m"), range));
+
+        Vector2 velocity = projectile.getLinearVelocity();
+        if (landedRange == null && hasLanded(position, velocity)) {
+            landedRange = range;
+        }
+        if (landedRange != null) {
+            labelDroppedRange.setText(String.format("%.2f m", landedRange));
+        }
+    }
+
+    private boolean hasLanded(Vector2 position, Vector2 velocity) {
+        double groundTop = GROUND_Y_POSITION + (GROUND_HEIGHT / 2.0);
+        double height = position.y - groundTop - BALL_RADIUS;
+        return height <= LANDED_HEIGHT_TOLERANCE && velocity.getMagnitude() <= LANDED_SPEED_THRESHOLD
+                && velocity.y <= LANDED_SPEED_THRESHOLD;
     }
 
     /**
