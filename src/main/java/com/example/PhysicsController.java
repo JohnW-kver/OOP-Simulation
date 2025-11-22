@@ -64,9 +64,6 @@ public class PhysicsController implements Initializable {
     // Physics world - this is where all the physics simulation happens
     private World world;
 
-    // List to store all ball bodies
-    private List<Body> balls;
-
     // Ground body to prevent infinite falling
     private Body ground;
 
@@ -97,19 +94,21 @@ public class PhysicsController implements Initializable {
     @FXML
     private Slider massSlider;
 
+    @FXML
+    private Body projectile;
+
+    private double projectileStartX = -8;
+    private double projectileStartY = 0;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         System.out.println("PhysicsController initialized!");
         System.out.println("Canvas size: " + canvas.getWidth() + "x" + canvas.getHeight());
-
-        // Initialize the balls list
-        balls = new ArrayList<>();
-
         // Step 1: Create the physics world
         setupPhysicsWorld();
 
         // Step 2: Create a simple falling ball
-        createFallingBall();
+        createProjectile();
 
         // Step 3: Create ground so ball doesn't fall forever
         createGround();
@@ -122,10 +121,6 @@ public class PhysicsController implements Initializable {
 
         // Step 6: Start the animation loop
         startGameLoop();
-
-        System.out.println("Physics world created with " + world.getBodyCount() + " bodies");
-        System.out.println("Animation loop started!");
-        System.out.println("Click on the canvas to create new balls!");
     }
 
     /**
@@ -142,22 +137,9 @@ public class PhysicsController implements Initializable {
         System.out.println("Physics world created with gravity: " + world.getGravity());
     }
 
-    /**
-     * Creates a simple ball that will fall due to gravity at the center
-     */
-    private void createFallingBall() {
-        createBallAt(0.0, 3.0);
-    }
-
-    /**
-     * Creates a ball at the specified world coordinates
-     * 
-     * @param worldX X position in world coordinates (meters)
-     * @param worldY Y position in world coordinates (meters)
-     */
-    private void createBallAt(double worldX, double worldY) {
+    private void createProjectile() {
         // Create a new body (this represents our ball)
-        Body ball = new Body();
+        projectile = new Body();
 
         // Create a circle shape for the ball using our constant
         Circle circle = new Circle(BALL_RADIUS);
@@ -170,23 +152,18 @@ public class PhysicsController implements Initializable {
         fixture.setRestitution(BALL_RESTITUTION); // Bounciness factor
 
         // Add the fixture to the body
-        ball.addFixture(fixture);
+        projectile.addFixture(fixture);
 
         // Set the mass based on the fixtures (this is important!)
         // Let's manually create a mass from the circle shape
         Mass mass = circle.createMass(fixture.getDensity());
-        ball.setMass(mass);
+        projectile.setMass(mass);
 
-        // Position the ball at the specified coordinates
-        ball.translate(worldX, worldY);
+        // Position the projectile at the specified coordinates
+        projectile.translate(projectileStartX, projectileStartY);
 
-        // Add the ball to the physics world
-        world.addBody(ball);
-
-        // Add the ball to our list for rendering
-        balls.add(ball);
-
-        System.out.println("Ball created at position: " + ball.getTransform().getTranslation());
+        // Add the projectile to the physics world
+        world.addBody(projectile);
     }
 
     /**
@@ -219,11 +196,7 @@ public class PhysicsController implements Initializable {
         System.out.println("Ground created at position: " + ground.getTransform().getTranslation());
     }
 
-    /**
-     * Sets up mouse interaction to create balls when clicking on the canvas
-     */
     private void setupUIControls() {
-        canvas.setOnMouseClicked(this::onCanvasClicked);
         speedSlider.valueProperty().addListener(
                 (observable, oldValue, newValue) -> {
                     speedLabel.setText(String.format("%.1f m/s", newValue.doubleValue()));
@@ -232,7 +205,20 @@ public class PhysicsController implements Initializable {
                 (observable, oldValue, newValue) -> {
                     massLabel.setText(String.format("%.1f kg", newValue.doubleValue()));
                 });
+        resetButton.setOnAction(event -> resetProjectile());
         launchButton.setOnAction(event -> launchProjectile());
+    }
+
+    private void resetProjectile() {
+        projectile.clearForce();
+        projectile.clearTorque();
+        projectile.setLinearVelocity(0, 0);
+        projectile.setAngularVelocity(0);
+
+        projectile.getTransform().setTranslation(projectileStartX, projectileStartY);
+
+        projectile.getTransform().setRotation(0);
+        projectile.setAtRest(false);
     }
 
     private void launchProjectile() {
@@ -245,34 +231,13 @@ public class PhysicsController implements Initializable {
             double vx = speed * Math.cos(angleRadians);
             double vy = speed * Math.sin(angleRadians);
 
-            for (Body ball : balls) {
-                ball.setLinearVelocity(vx, vy);
-            }
+            projectile.setAtRest(false);
+            projectile.setLinearVelocity(vx, vy);
 
         } catch (NumberFormatException e) {
             System.out.println(e.getMessage());
         }
 
-    }
-
-    /**
-     * Handles mouse clicks on the canvas to create new balls
-     * 
-     * @param event The mouse click event
-     */
-    private void onCanvasClicked(MouseEvent event) {
-        // Convert screen coordinates to world coordinates
-        double screenX = event.getX();
-        double screenY = event.getY();
-
-        // Convert to world coordinates (reverse of the rendering conversion)
-        double worldX = (screenX - canvas.getWidth() / 2) / PIXELS_PER_METER;
-        double worldY = (canvas.getHeight() / 2 - screenY) / PIXELS_PER_METER;
-
-        // Create a new ball at the clicked position
-        createBallAt(worldX, worldY);
-
-        System.out.println("Created ball at world coordinates: (" + worldX + ", " + worldY + ")");
     }
 
     /**
@@ -315,12 +280,6 @@ public class PhysicsController implements Initializable {
         // Update the physics world
         // The step method advances the simulation by the given time
         world.update(deltaTime);
-
-        // Optional: Print ball count occasionally for debugging
-        // Uncomment the lines below if you want to see the ball count in console
-        // if (System.currentTimeMillis() % 1000 < 50) {
-        // System.out.println("Total balls: " + balls.size());
-        // }
     }
 
     /**
@@ -335,10 +294,7 @@ public class PhysicsController implements Initializable {
         gc.setFill(Color.LIGHTBLUE);
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-        // Draw all balls
-        for (Body ball : balls) {
-            drawBall(gc, ball);
-        }
+        drawBall(gc, projectile);
 
         // Draw the ground
         drawGround(gc);
