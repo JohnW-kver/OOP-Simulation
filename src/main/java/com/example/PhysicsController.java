@@ -110,8 +110,9 @@ public class PhysicsController implements Initializable {
     private double projectileStartX = -8;
     private double projectileStartY = 0;
     private Double landedRange = null;
-    private static final double LANDED_SPEED_THRESHOLD = 0.1;
-    private static final double LANDED_HEIGHT_TOLERANCE = 0.02;
+    private boolean hasBeenLaunched = false;
+    private boolean hasBeenAirborne = false;
+    private static final double LANDED_HEIGHT_TOLERANCE = 0.1;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -232,6 +233,10 @@ public class PhysicsController implements Initializable {
 
         projectile.getTransform().setRotation(0);
         projectile.setAtRest(false);
+        landedRange = null;
+        hasBeenLaunched = false;
+        hasBeenAirborne = false;
+        labelDroppedRange.setText("-- m");
     }
 
     private void launchProjectile() {
@@ -243,6 +248,11 @@ public class PhysicsController implements Initializable {
             double angleRadians = Math.toRadians(angle);
             double vx = speed * Math.cos(angleRadians);
             double vy = speed * Math.sin(angleRadians);
+
+            landedRange = null;
+            hasBeenLaunched = true;
+            hasBeenAirborne = false;
+            labelDroppedRange.setText("-- m");
 
             projectile.setAtRest(false);
             projectile.setLinearVelocity(vx, vy);
@@ -320,6 +330,10 @@ public class PhysicsController implements Initializable {
         labelHeight.setText(String.format(("%.2f m"), height));
         labelRange.setText(String.format(("%.2f m"), range));
 
+        if (hasBeenLaunched && height > 0.5) {
+            hasBeenAirborne = true;
+        }
+
         Vector2 velocity = projectile.getLinearVelocity();
         if (landedRange == null && hasLanded(position, velocity)) {
             landedRange = range;
@@ -330,10 +344,12 @@ public class PhysicsController implements Initializable {
     }
 
     private boolean hasLanded(Vector2 position, Vector2 velocity) {
+        if (!hasBeenLaunched || !hasBeenAirborne) {
+            return false;
+        }
         double groundTop = GROUND_Y_POSITION + (GROUND_HEIGHT / 2.0);
         double height = position.y - groundTop - BALL_RADIUS;
-        return height <= LANDED_HEIGHT_TOLERANCE && velocity.getMagnitude() <= LANDED_SPEED_THRESHOLD
-                && velocity.y <= LANDED_SPEED_THRESHOLD;
+        return height <= LANDED_HEIGHT_TOLERANCE;
     }
 
     /**
