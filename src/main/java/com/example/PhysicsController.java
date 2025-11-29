@@ -114,6 +114,9 @@ public class PhysicsController implements Initializable {
     private boolean hasBeenAirborne = false;
     private static final double GROUND_CONTACT_TOLERANCE = 0.1;
 
+    private List<Vector2> trajectoryTrace = new ArrayList<>();
+    private static final double TRACE_POINT_RADIUS = 3.0;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         System.out.println("PhysicsController initialized!");
@@ -317,6 +320,13 @@ public class PhysicsController implements Initializable {
         gc.setFill(Color.LIGHTBLUE);
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
+        if (hasBeenLaunched && landedRange == null) {
+            Vector2 position = projectile.getTransform().getTranslation();
+            trajectoryTrace.add(position.copy());
+        }
+
+        drawTrajectoryTrace(gc);
+
         drawBall(gc, projectile);
 
         // Draw the ground
@@ -340,6 +350,26 @@ public class PhysicsController implements Initializable {
         }
         if (landedRange != null) {
             labelDroppedRange.setText(String.format("%.2f m", landedRange));
+        }
+    }
+
+    private void drawTrajectoryTrace(GraphicsContext gc) {
+        if (trajectoryTrace.isEmpty()) {
+            return;
+        }
+
+        for (int i = 0; i < trajectoryTrace.size(); i++) {
+            Vector2 pos = trajectoryTrace.get(i);
+
+            double screenX = (canvas.getWidth() / 2) + (pos.x * PIXELS_PER_METER);
+            double screenY = (canvas.getHeight() / 2) - (pos.y * PIXELS_PER_METER);
+
+            double opacity = 0.3 + (0.7 * i / trajectoryTrace.size());
+
+            gc.setFill(Color.color(1, 0.0, 0.0, opacity));
+
+            gc.fillOval(screenX - TRACE_POINT_RADIUS, screenY - TRACE_POINT_RADIUS,
+                    TRACE_POINT_RADIUS * 2, TRACE_POINT_RADIUS * 2);
         }
     }
 
