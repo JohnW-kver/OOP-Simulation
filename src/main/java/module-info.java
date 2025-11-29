@@ -3,6 +3,7 @@ module com.example {
     requires javafx.fxml;
     requires org.dyn4j;
     requires javafx.graphics;
+    requires javafx.base;
 
     opens com.example to javafx.fxml;
 

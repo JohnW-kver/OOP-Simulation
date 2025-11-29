@@ -46,6 +46,14 @@
    <center>
       <Canvas fx:id="canvas" height="600.0" width="800.0" />
    </center>
+   <right>
+      <VBox alignment="CENTER" spacing="10.0" style="-fx-padding: 10px;">
+         <children>
+            <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Saved Experiments" />
+            <ListView fx:id="experimentListView" prefHeight="400.0" prefWidth="200.0" />
+         </children>
+      </VBox>
+   </right>
    <top>
       <VBox alignment="CENTER" spacing="10.0" style="-fx-padding: 10px;">
          <children>
@@ -84,6 +92,10 @@
                         <Button fx:id="launchButton" prefWidth="80.0"
                            style="-fx-font-size: 14px; -fx-font-weight: bold;" text="Launch" />
                         <Button fx:id="resetButton" prefWidth="80.0" text="Reset" />
+                        <Button fx:id="saveButton" prefWidth="80.0"
+                           text="Save" />
+                        <Button fx:id="loadButton" prefWidth="80.0"
+                           text="Load" />
                      </children>
                   </VBox>
                </children>

@@ -15,12 +15,17 @@ import org.dyn4j.geometry.Vector2;
 import org.dyn4j.world.World;
 
 import javafx.animation.AnimationTimer;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
@@ -103,6 +108,18 @@ public class PhysicsController implements Initializable {
 
     @FXML
     private Slider massSlider;
+
+    @FXML
+    private Button saveButton;
+
+    @FXML
+    private Button loadButton;
+
+    @FXML
+    private ListView<String> experimentListView;
+
+    private ObservableList<ExperimentRecord> savedExperiments = FXCollections.observableArrayList();
+    private ObservableList<String> experimentDisplayList = FXCollections.observableArrayList();
 
     @FXML
     private Body projectile;
@@ -224,6 +241,43 @@ public class PhysicsController implements Initializable {
                 });
         resetButton.setOnAction(event -> resetProjectile());
         launchButton.setOnAction(event -> launchProjectile());
+        saveButton.setOnAction(event -> saveCurrentExperiment());
+        loadButton.setOnAction(event -> loadExperimentsFromFile());
+
+        experimentListView.setItems(experimentDisplayList);
+    }
+
+    private Object loadExperimentsFromFile() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'loadExperimentsFromFile'");
+    }
+
+    private void saveCurrentExperiment() {
+        if (landedRange == null) {
+            Alert alert = new Alert(AlertType.WARNING);
+            alert.setTitle("Cannot Save Experiment");
+            alert.setHeaderText(null);
+            alert.setContentText("Please launch the projectile and let it land before saving the experiment.");
+            alert.showAndWait();
+            return;
+        }
+        double speed = speedSlider.getValue();
+        String angleString = angleField.getText().trim();
+        double mass = massSlider.getValue();
+        try {
+            double angle = Double.parseDouble(angleString);
+            ExperimentRecord record = new ExperimentRecord(speed, angle, mass, landedRange);
+            savedExperiments.add(record);
+            experimentDisplayList.add(String.format("Speed: %.1f m/s, Angle: %.1f°, Mass: %.1f kg, Range: %.2f m",
+                    speed, angle, mass, landedRange));
+        } catch (NumberFormatException e) {
+            System.out.println(e.getMessage());
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Invalid Angle");
+            alert.setHeaderText(null);
+            alert.setContentText("Please enter a valid number for the launch angle.");
+            alert.showAndWait();
+        }
     }
 
     private void resetProjectile() {
