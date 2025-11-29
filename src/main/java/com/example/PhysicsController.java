@@ -108,11 +108,11 @@ public class PhysicsController implements Initializable {
     private Body projectile;
 
     private double projectileStartX = -8;
-    private double projectileStartY = 0;
+    private double projectileStartY = -2;
     private Double landedRange = null;
     private boolean hasBeenLaunched = false;
     private boolean hasBeenAirborne = false;
-    private static final double LANDED_HEIGHT_TOLERANCE = 0.1;
+    private static final double GROUND_CONTACT_TOLERANCE = 0.1;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -349,7 +349,7 @@ public class PhysicsController implements Initializable {
         }
         double groundTop = GROUND_Y_POSITION + (GROUND_HEIGHT / 2.0);
         double height = position.y - groundTop - BALL_RADIUS;
-        return height <= LANDED_HEIGHT_TOLERANCE;
+        return height <= GROUND_CONTACT_TOLERANCE;
     }
 
     /**
