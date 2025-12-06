@@ -48,10 +48,11 @@
       <Canvas fx:id="canvas" height="600.0" width="800.0" />
    </center>
    <right>
-      <VBox alignment="CENTER" spacing="10.0" style="-fx-padding: 10px;">
+      <VBox alignment="TOP_CENTER" spacing="10.0" style="-fx-padding: 10px;">
          <children>
             <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Saved Experiments" />
-            <ListView fx:id="experimentListView" prefHeight="400.0" prefWidth="200.0" />
+            <ListView fx:id="experimentListView" prefHeight="400.0" prefWidth="200.0"
+               VBox.vgrow="ALWAYS" />
          </children>
       </VBox>
    </right>

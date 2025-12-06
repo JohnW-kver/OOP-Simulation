@@ -14,7 +14,7 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        this.scene = new Scene(load("physics"), 800, 900);
+        this.scene = new Scene(load("physics"), 1050, 1000);
         primaryStage.setTitle("Physics Simulator");
         primaryStage.setScene(scene);
         primaryStage.show();

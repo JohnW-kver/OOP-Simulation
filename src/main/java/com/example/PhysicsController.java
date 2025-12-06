@@ -1,6 +1,10 @@
 package com.example;
 
+import java.io.File;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -61,6 +65,8 @@ public class PhysicsController implements Initializable {
 
     /** Pixels per meter for coordinate conversion */
     private static final double PIXELS_PER_METER = 50.0;
+
+    private static final String SAVE_FILE = "physics_experiments.csv";
 
     // === JavaFX COMPONENTS ===
 
@@ -243,13 +249,91 @@ public class PhysicsController implements Initializable {
         launchButton.setOnAction(event -> launchProjectile());
         saveButton.setOnAction(event -> saveCurrentExperiment());
         loadButton.setOnAction(event -> loadExperimentsFromFile());
+        experimentListView.getSelectionModel().selectedIndexProperty().addListener((obs, oldIndex, newIndex) -> {
+            if (newIndex == null || newIndex.intValue() < 0 || newIndex.intValue() >= savedExperiments.size()) {
+                return;
+            }
+            applyExperimentToControls(savedExperiments.get(newIndex.intValue()));
+        });
 
         experimentListView.setItems(experimentDisplayList);
     }
 
-    private Object loadExperimentsFromFile() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'loadExperimentsFromFile'");
+    private void applyExperimentToControls(ExperimentRecord record) {
+        projectile.clearForce();
+        projectile.clearTorque();
+        projectile.setLinearVelocity(0, 0);
+        projectile.setAngularVelocity(0);
+
+        projectile.getTransform().setTranslation(projectileStartX, projectileStartY);
+
+        projectile.getTransform().setRotation(0);
+        projectile.setAtRest(false);
+        landedRange = null;
+        hasBeenLaunched = false;
+        hasBeenAirborne = false;
+        trajectoryTrace.clear();
+
+        speedSlider.setValue(record.getSpeed());
+        massSlider.setValue(record.getMass());
+        angleField.setText(String.format("%.1f", record.getAngle()));
+
+        labelDroppedRange.setText(String.format("%.2f m", record.getLandedRange()));
+        labelHeight.setText("0.00 m");
+        labelRange.setText("0.00 m");
+    }
+
+    private void loadExperimentsFromFile() {
+        Path savePath = Path.of(SAVE_FILE);
+
+        if (!Files.exists(savePath)) {
+            Alert alert = new Alert(AlertType.INFORMATION);
+            alert.setTitle("No Saved Experiments");
+            alert.setContentText("No CSV file found yet. Save an experiment first.");
+            alert.showAndWait();
+            return;
+        }
+
+        try {
+            List<String> lines = Files.readAllLines(savePath);
+            savedExperiments.clear();
+            experimentDisplayList.clear();
+            for (String line : lines) {
+                if (line.trim().isEmpty() || line.startsWith("speed")) {
+                    continue;
+                }
+                String[] parts = line.split(",");
+                if (parts.length != 4) {
+                    continue;
+                }
+
+                try {
+                    double speed = Double.parseDouble(parts[0]);
+                    double angle = Double.parseDouble(parts[1]);
+                    double mass = Double.parseDouble(parts[2]);
+                    double range = Double.parseDouble(parts[3]);
+
+                    ExperimentRecord record = new ExperimentRecord(speed, angle, mass, range);
+                    savedExperiments.add(record);
+                    experimentDisplayList.add(formatExperiment(record));
+                } catch (NumberFormatException e) {
+                    System.out.println("Cannot convert line: " + line + " to record!");
+                }
+            }
+
+            if (experimentDisplayList.isEmpty()) {
+                Alert alert = new Alert(AlertType.INFORMATION);
+                alert.setTitle("No valid Records");
+                alert.setContentText("The CSV file has no valid experiments to load.");
+                alert.showAndWait();
+            }
+
+        } catch (Exception e) {
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Load failed");
+            alert.setContentText("Could not read experiments from CSV: " + e.getMessage());
+            alert.showAndWait();
+        }
     }
 
     private void saveCurrentExperiment() {
@@ -268,14 +352,37 @@ public class PhysicsController implements Initializable {
             double angle = Double.parseDouble(angleString);
             ExperimentRecord record = new ExperimentRecord(speed, angle, mass, landedRange);
             savedExperiments.add(record);
-            experimentDisplayList.add(String.format("Speed: %.1f m/s, Angle: %.1f°, Mass: %.1f kg, Range: %.2f m",
-                    speed, angle, mass, landedRange));
+            experimentDisplayList.add(formatExperiment(record));
+            saveExperimentToCsv(record);
         } catch (NumberFormatException e) {
             System.out.println(e.getMessage());
             Alert alert = new Alert(AlertType.ERROR);
             alert.setTitle("Invalid Angle");
             alert.setHeaderText(null);
             alert.setContentText("Please enter a valid number for the launch angle.");
+            alert.showAndWait();
+        }
+    }
+
+    private String formatExperiment(ExperimentRecord record) {
+        return String.format("Speed: %.1f m/s, Angle: %.1f°, Mass: %.1f kg, Range: %.2f m",
+                record.getSpeed(), record.getAngle(), record.getMass(), record.getLandedRange());
+    }
+
+    public void saveExperimentToCsv(ExperimentRecord record) {
+        String line = String.format("%.2f,%.2f,%.2f,%.2f\n", record.getSpeed(), record.getAngle(), record.getMass(),
+                record.getLandedRange());
+
+        try {
+            Path savePath = Path.of(SAVE_FILE);
+            if (!Files.exists(savePath)) {
+                Files.writeString(savePath, "speed,angle,mass,range\n");
+            }
+            Files.writeString(savePath, line, StandardOpenOption.APPEND);
+        } catch (Exception e) {
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Save failed");
+            alert.setContentText("Cannot save: " + e.getMessage());
             alert.showAndWait();
         }
     }
@@ -293,7 +400,10 @@ public class PhysicsController implements Initializable {
         landedRange = null;
         hasBeenLaunched = false;
         hasBeenAirborne = false;
+        trajectoryTrace.clear();
         labelDroppedRange.setText("-- m");
+        labelHeight.setText("0.00 m");
+        labelRange.setText("0.00 m");
     }
 
     private void launchProjectile() {
