@@ -34,6 +34,7 @@
 
 <?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.TextField?>
@@ -64,6 +65,13 @@
 
             <HBox alignment="CENTER" spacing="20.0" style="-fx-padding: 10px;">
                <children>
+                  <VBox alignment="CENTER" spacing="5.0">
+                     <children>
+                        <Label text="Projectile" />
+                        <ComboBox fx:id="projectileTypeCombo" prefWidth="140.0" />
+                     </children>
+                  </VBox>
+
                   <VBox alignment="CENTER" prefHeight="200.0" prefWidth="200.0">
                      <children>
                         <Label text="Mass (kg)" />
