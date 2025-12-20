@@ -123,6 +123,18 @@ public class PhysicsController implements Initializable {
     @FXML
     private ListView<String> experimentListView;
 
+    @FXML
+    private ComboBox<String> sortByCombo;
+
+    @FXML
+    private Button sortButton;
+
+    @FXML
+    private TextField searchRangeField;
+
+    @FXML
+    private Button searchButton;
+
     private ObservableList<ExperimentRecord> savedExperiments = FXCollections.observableArrayList();
     private ObservableList<String> experimentDisplayList = FXCollections.observableArrayList();
 
@@ -213,6 +225,13 @@ public class PhysicsController implements Initializable {
         launchButton.setOnAction(event -> launchProjectile());
         saveButton.setOnAction(event -> saveCurrentExperiment());
         loadButton.setOnAction(event -> loadExperimentsFromFile());
+
+        // Setup sort combo box
+        sortByCombo.setItems(FXCollections.observableArrayList("Range", "Speed", "Angle", "Mass"));
+        sortByCombo.getSelectionModel().select("Range");
+        sortButton.setOnAction(event -> sortExperiments());
+        searchButton.setOnAction(event -> searchExperimentByRange());
+
         experimentListView.getSelectionModel().selectedIndexProperty().addListener((obs, oldIndex, newIndex) -> {
             if (newIndex == null || newIndex.intValue() < 0 || newIndex.intValue() >= savedExperiments.size()) {
                 return;
@@ -513,5 +532,129 @@ public class PhysicsController implements Initializable {
         double groundTop = groundObject.getTopY();
         double height = position.y - groundTop - projectileObject.getRadiusMeters();
         return height <= GROUND_CONTACT_TOLERANCE;
+    }
+
+    private void sortExperiments() {
+        if (savedExperiments.isEmpty()) {
+            Alert alert = new Alert(AlertType.INFORMATION);
+            alert.setTitle("No Experiments");
+            alert.setHeaderText(null);
+            alert.setContentText("No experiments to sort. Load or save some experiments first.");
+            alert.showAndWait();
+            return;
+        }
+
+        // Determine sort criteria from combo box
+        String sortByString = sortByCombo.getValue();
+        int sortBy = ExperimentSorter.SORT_BY_RANGE; // Default
+
+        if ("Speed".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_SPEED;
+        } else if ("Angle".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_ANGLE;
+        } else if ("Mass".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_MASS;
+        }
+
+        // Convert ObservableList to regular ArrayList for sorting
+        ArrayList<ExperimentRecord> listToSort = new ArrayList<ExperimentRecord>();
+        for (int i = 0; i < savedExperiments.size(); i++) {
+            listToSort.add(savedExperiments.get(i));
+        }
+
+        // Sort using merge sort
+        List<ExperimentRecord> sortedList = ExperimentSorter.mergeSort(listToSort, sortBy);
+
+        // Update the saved experiments and display list
+        savedExperiments.clear();
+        experimentDisplayList.clear();
+
+        for (int i = 0; i < sortedList.size(); i++) {
+            ExperimentRecord record = sortedList.get(i);
+            savedExperiments.add(record);
+            experimentDisplayList.add(formatExperiment(record));
+        }
+
+        Alert alert = new Alert(AlertType.INFORMATION);
+        alert.setTitle("Sort Complete");
+        alert.setHeaderText(null);
+        alert.setContentText("Experiments sorted by " + sortByString + " using Merge Sort.");
+        alert.showAndWait();
+    }
+
+    private void searchExperimentByRange() {
+        if (savedExperiments.isEmpty()) {
+            Alert alert = new Alert(AlertType.INFORMATION);
+            alert.setTitle("No Experiments");
+            alert.setHeaderText(null);
+            alert.setContentText("No experiments to search. Load or save some experiments first.");
+            alert.showAndWait();
+            return;
+        }
+
+        String searchText = searchRangeField.getText().trim();
+        if (searchText.isEmpty()) {
+            Alert alert = new Alert(AlertType.WARNING);
+            alert.setTitle("Invalid Input");
+            alert.setHeaderText(null);
+            alert.setContentText("Please enter a range value to search for.");
+            alert.showAndWait();
+            return;
+        }
+
+        double targetRange;
+        try {
+            targetRange = Double.parseDouble(searchText);
+        } catch (NumberFormatException e) {
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Invalid Number");
+            alert.setHeaderText(null);
+            alert.setContentText("Please enter a valid number for the range.");
+            alert.showAndWait();
+            return;
+        }
+
+        // First, sort the list by range (binary search requires sorted data)
+        ArrayList<ExperimentRecord> listToSort = new ArrayList<ExperimentRecord>();
+        for (int i = 0; i < savedExperiments.size(); i++) {
+            listToSort.add(savedExperiments.get(i));
+        }
+
+        List<ExperimentRecord> sortedList = ExperimentSorter.mergeSort(listToSort, ExperimentSorter.SORT_BY_RANGE);
+
+        // Update the display to show sorted list
+        savedExperiments.clear();
+        experimentDisplayList.clear();
+        for (int i = 0; i < sortedList.size(); i++) {
+            ExperimentRecord record = sortedList.get(i);
+            savedExperiments.add(record);
+            experimentDisplayList.add(formatExperiment(record));
+        }
+
+        // Perform binary search to find closest match
+        int foundIndex = ExperimentSorter.binarySearchClosest(sortedList, targetRange);
+
+        if (foundIndex >= 0 && foundIndex < savedExperiments.size()) {
+            // Select the found item in the list view
+            experimentListView.getSelectionModel().select(foundIndex);
+            experimentListView.scrollTo(foundIndex);
+
+            ExperimentRecord found = savedExperiments.get(foundIndex);
+            Alert alert = new Alert(AlertType.INFORMATION);
+            alert.setTitle("Search Result");
+            alert.setHeaderText("Found closest match using Binary Search");
+            alert.setContentText(String.format(
+                    "Target range: %.2f m\n" +
+                            "Found experiment with range: %.2f m\n" +
+                            "(List sorted by range for binary search)",
+                    targetRange, found.getLandedRange()));
+            alert.showAndWait();
+        } else {
+            Alert alert = new Alert(AlertType.INFORMATION);
+            alert.setTitle("Search Result");
+            alert.setHeaderText(null);
+            alert.setContentText("No matching experiment found.");
+            alert.showAndWait();
+        }
     }
 }
