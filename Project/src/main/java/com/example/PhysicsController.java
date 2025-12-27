@@ -32,6 +32,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter;
 import javafx.scene.paint.Color;
 
 public class PhysicsController implements Initializable {
@@ -60,6 +61,9 @@ public class PhysicsController implements Initializable {
 
     private static final String SAVE_FILE = "physics_experiments.csv";
 
+    private static final double MIN_ANGLE_DEGREES = 0;
+    private static final double MAX_ANGLE_DEGREES = 90;
+
     // === JavaFX COMPONENTS ===
 
     @FXML
@@ -83,6 +87,9 @@ public class PhysicsController implements Initializable {
 
     @FXML
     private TextField angleField;
+
+    @FXML
+    private Label angleErrorLabel;
 
     @FXML
     private Button launchButton;
@@ -226,6 +233,8 @@ public class PhysicsController implements Initializable {
         saveButton.setOnAction(event -> saveCurrentExperiment());
         loadButton.setOnAction(event -> loadExperimentsFromFile());
 
+        setupAngleValidation();
+
         // Setup sort combo box
         sortByCombo.setItems(FXCollections.observableArrayList("Range", "Speed", "Angle", "Mass"));
         sortByCombo.getSelectionModel().select("Range");
@@ -240,6 +249,72 @@ public class PhysicsController implements Initializable {
         });
 
         experimentListView.setItems(experimentDisplayList);
+    }
+
+    private void setupAngleValidation() {
+        angleField.setTextFormatter(new TextFormatter<String>(change -> {
+            String newText = change.getControlNewText();
+            if (newText.isEmpty()) {
+                return change;
+            }
+            if (newText.matches("\\d{0,3}(\\.\\d{0,4})?")) {
+                return change;
+            }
+            return null;
+        }));
+
+        angleField.textProperty().addListener((obs, oldValue, newValue) -> updateAngleValidationUI(false));
+        updateAngleValidationUI(false);
+    }
+
+    private void updateAngleValidationUI(boolean showAlert) {
+        String message = validateAngleText(angleField.getText());
+        boolean valid = (message == null);
+
+        if (angleErrorLabel != null) {
+            angleErrorLabel.setManaged(!valid);
+            angleErrorLabel.setVisible(!valid);
+            angleErrorLabel.setText(valid ? "" : message);
+        }
+
+        if (launchButton != null) {
+            launchButton.setDisable(!valid);
+        }
+        if (saveButton != null) {
+            // You can only save after landing anyway, but this prevents saving with a bad
+            // edited angle.
+            saveButton.setDisable(!valid);
+        }
+
+        if (showAlert && !valid) {
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Invalid Angle");
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        }
+    }
+
+    private String validateAngleText(String rawText) {
+        String text = rawText == null ? "" : rawText.trim();
+        if (text.isEmpty()) {
+            return "Enter a launch angle.";
+        }
+
+        double angle;
+        try {
+            angle = Double.parseDouble(text);
+        } catch (NumberFormatException e) {
+            return "Angle must be a valid number.";
+        }
+
+        if (Double.isNaN(angle) || Double.isInfinite(angle)) {
+            return "Angle must be a normal number.";
+        }
+        if (angle < MIN_ANGLE_DEGREES || angle > MAX_ANGLE_DEGREES) {
+            return String.format("Angle must be between %.0f° and %.0f°.", MIN_ANGLE_DEGREES, MAX_ANGLE_DEGREES);
+        }
+        return null;
     }
 
     private void switchProjectile(String projectileType) {

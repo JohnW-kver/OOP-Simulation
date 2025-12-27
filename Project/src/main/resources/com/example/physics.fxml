@@ -108,6 +108,8 @@
                      <children>
                         <Label text="Launch Angle (degrees)" />
                         <TextField fx:id="angleField" prefWidth="100.0" text="45" />
+                        <Label fx:id="angleErrorLabel" managed="false"
+                           style="-fx-text-fill: #b00020;" text="" visible="false" wrapText="true" />
                      </children>
                   </VBox>
 
