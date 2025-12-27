@@ -142,6 +142,9 @@ public class PhysicsController implements Initializable {
     @FXML
     private Button searchButton;
 
+    @FXML
+    private Button deleteButton;
+
     private ObservableList<ExperimentRecord> savedExperiments = FXCollections.observableArrayList();
     private ObservableList<String> experimentDisplayList = FXCollections.observableArrayList();
 
@@ -240,15 +243,86 @@ public class PhysicsController implements Initializable {
         sortByCombo.getSelectionModel().select("Range");
         sortButton.setOnAction(event -> sortExperiments());
         searchButton.setOnAction(event -> searchExperimentByRange());
+        deleteButton.setOnAction(event -> deleteSelectedExperiment());
+        deleteButton.setDisable(true);
 
         experimentListView.getSelectionModel().selectedIndexProperty().addListener((obs, oldIndex, newIndex) -> {
             if (newIndex == null || newIndex.intValue() < 0 || newIndex.intValue() >= savedExperiments.size()) {
+                if (deleteButton != null) {
+                    deleteButton.setDisable(true);
+                }
                 return;
+            }
+
+            if (deleteButton != null) {
+                deleteButton.setDisable(false);
             }
             applyExperimentToControls(savedExperiments.get(newIndex.intValue()));
         });
 
         experimentListView.setItems(experimentDisplayList);
+    }
+
+    private void deleteSelectedExperiment() {
+        if (savedExperiments.isEmpty()) {
+            Alert alert = new Alert(AlertType.INFORMATION);
+            alert.setTitle("No Experiments");
+            alert.setHeaderText(null);
+            alert.setContentText("There are no saved experiments to delete.");
+            alert.showAndWait();
+            return;
+        }
+
+        int index = experimentListView.getSelectionModel().getSelectedIndex();
+        if (index < 0 || index >= savedExperiments.size()) {
+            Alert alert = new Alert(AlertType.WARNING);
+            alert.setTitle("No Selection");
+            alert.setHeaderText(null);
+            alert.setContentText("Select an experiment from the list first.");
+            alert.showAndWait();
+            return;
+        }
+
+        savedExperiments.remove(index);
+        experimentDisplayList.remove(index);
+        experimentListView.getSelectionModel().clearSelection();
+
+        if (deleteButton != null) {
+            deleteButton.setDisable(true);
+        }
+
+        rewriteExperimentsCsvFile();
+
+        Alert alert = new Alert(AlertType.INFORMATION);
+        alert.setTitle("Deleted");
+        alert.setHeaderText(null);
+        alert.setContentText("Experiment deleted and CSV updated.");
+        alert.showAndWait();
+
+    }
+
+    private void rewriteExperimentsCsvFile() {
+        Path savePath = Path.of(SAVE_FILE);
+
+        try {
+            // Always rewrite the file so it matches the current in-app list.
+            // Keep a header row for clarity.
+            Files.writeString(savePath, "speed,angle,mass,range\n",
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+
+            for (int i = 0; i < savedExperiments.size(); i++) {
+                ExperimentRecord record = savedExperiments.get(i);
+                String line = String.format("%.2f,%.2f,%.2f,%.2f\n",
+                        record.getSpeed(), record.getAngle(), record.getMass(), record.getLandedRange());
+                Files.writeString(savePath, line, StandardOpenOption.APPEND);
+            }
+        } catch (Exception e) {
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Delete failed");
+            alert.setHeaderText(null);
+            alert.setContentText("Could not update CSV file: " + e.getMessage());
+            alert.showAndWait();
+        }
     }
 
     private void setupAngleValidation() {
