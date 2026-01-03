@@ -110,6 +110,12 @@ public class PhysicsController implements Initializable {
     private Label labelRange;
 
     @FXML
+    private Label labelTheoreticalRange;
+
+    @FXML
+    private Label labelRangeDifference;
+
+    @FXML
     private Label labelDroppedRange;
 
     @FXML
@@ -159,6 +165,10 @@ public class PhysicsController implements Initializable {
     private static final double GROUND_CONTACT_TOLERANCE = 0.1;
 
     private double maxHeightMeters = 0.0;
+
+    private Double lastLaunchSpeed = null;
+    private Double lastLaunchAngle = null;
+    private double theoreticalRangeMeters = 0.0;
 
     private List<Vector2> trajectoryTrace = new ArrayList<>();
     private static final double TRACE_POINT_RADIUS = 3.0;
@@ -228,6 +238,7 @@ public class PhysicsController implements Initializable {
         speedSlider.valueProperty().addListener(
                 (observable, oldValue, newValue) -> {
                     speedLabel.setText(String.format("%.1f m/s", newValue.doubleValue()));
+                    updateTheoreticalRangeUI();
                 });
         massSlider.valueProperty().addListener(
                 (observable, oldValue, newValue) -> {
@@ -266,6 +277,11 @@ public class PhysicsController implements Initializable {
         });
 
         experimentListView.setItems(experimentDisplayList);
+    }
+
+    private void updateTheoreticalRangeUI() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'updateTheoreticalRangeUI'");
     }
 
     private void deleteSelectedExperiment() {
@@ -344,6 +360,7 @@ public class PhysicsController implements Initializable {
 
         angleField.textProperty().addListener((obs, oldValue, newValue) -> updateAngleValidationUI(false));
         updateAngleValidationUI(false);
+        updateTheoreticalRangeUI();
     }
 
     private void updateAngleValidationUI(boolean showAlert) {
@@ -360,8 +377,6 @@ public class PhysicsController implements Initializable {
             launchButton.setDisable(!valid);
         }
         if (saveButton != null) {
-            // You can only save after landing anyway, but this prevents saving with a bad
-            // edited angle.
             saveButton.setDisable(!valid);
         }
 
@@ -372,6 +387,8 @@ public class PhysicsController implements Initializable {
             alert.setContentText(message);
             alert.showAndWait();
         }
+
+        updateTheoreticalRangeUI();
     }
 
     private String validateAngleText(String rawText) {
@@ -423,6 +440,10 @@ public class PhysicsController implements Initializable {
         trajectoryTrace.clear();
         maxHeightMeters = record.getMaxHeight();
 
+        lastLaunchSpeed = record.getSpeed();
+        lastLaunchAngle = record.getAngle();
+        theoreticalRangeMeters = computeTheoreticalRangeMeters(record.getSpeed(), record.getAngle());
+
         speedSlider.setValue(record.getSpeed());
         massSlider.setValue(record.getMass());
         angleField.setText(String.format("%.1f", record.getAngle()));
@@ -433,6 +454,11 @@ public class PhysicsController implements Initializable {
             labelMaxHeight.setText(String.format("%.2f m", record.getMaxHeight()));
         }
         labelRange.setText("0.00 m");
+    }
+
+    private double computeTheoreticalRangeMeters(double speed, double angle) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'computeTheoreticalRangeMeters'");
     }
 
     private void loadExperimentsFromFile() {
