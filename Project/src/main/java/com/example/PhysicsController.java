@@ -104,6 +104,9 @@ public class PhysicsController implements Initializable {
     private Label labelHeight;
 
     @FXML
+    private Label labelMaxHeight;
+
+    @FXML
     private Label labelRange;
 
     @FXML
@@ -154,6 +157,8 @@ public class PhysicsController implements Initializable {
     private boolean hasBeenLaunched = false;
     private boolean hasBeenAirborne = false;
     private static final double GROUND_CONTACT_TOLERANCE = 0.1;
+
+    private double maxHeightMeters = 0.0;
 
     private List<Vector2> trajectoryTrace = new ArrayList<>();
     private static final double TRACE_POINT_RADIUS = 3.0;
@@ -298,7 +303,6 @@ public class PhysicsController implements Initializable {
         alert.setHeaderText(null);
         alert.setContentText("Experiment deleted and CSV updated.");
         alert.showAndWait();
-
     }
 
     private void rewriteExperimentsCsvFile() {
@@ -307,13 +311,14 @@ public class PhysicsController implements Initializable {
         try {
             // Always rewrite the file so it matches the current in-app list.
             // Keep a header row for clarity.
-            Files.writeString(savePath, "speed,angle,mass,range\n",
+            Files.writeString(savePath, "speed,angle,mass,range,maxHeight\n",
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
             for (int i = 0; i < savedExperiments.size(); i++) {
                 ExperimentRecord record = savedExperiments.get(i);
-                String line = String.format("%.2f,%.2f,%.2f,%.2f\n",
-                        record.getSpeed(), record.getAngle(), record.getMass(), record.getLandedRange());
+                String line = String.format("%.2f,%.2f,%.2f,%.2f,%.2f\n",
+                        record.getSpeed(), record.getAngle(), record.getMass(), record.getLandedRange(),
+                        record.getMaxHeight());
                 Files.writeString(savePath, line, StandardOpenOption.APPEND);
             }
         } catch (Exception e) {
@@ -416,6 +421,7 @@ public class PhysicsController implements Initializable {
         hasBeenLaunched = false;
         hasBeenAirborne = false;
         trajectoryTrace.clear();
+        maxHeightMeters = record.getMaxHeight();
 
         speedSlider.setValue(record.getSpeed());
         massSlider.setValue(record.getMass());
@@ -423,6 +429,9 @@ public class PhysicsController implements Initializable {
 
         labelDroppedRange.setText(String.format("%.2f m", record.getLandedRange()));
         labelHeight.setText("0.00 m");
+        if (labelMaxHeight != null) {
+            labelMaxHeight.setText(String.format("%.2f m", record.getMaxHeight()));
+        }
         labelRange.setText("0.00 m");
     }
 
@@ -446,7 +455,7 @@ public class PhysicsController implements Initializable {
                     continue;
                 }
                 String[] parts = line.split(",");
-                if (parts.length != 4) {
+                if (parts.length != 4 && parts.length != 5) {
                     continue;
                 }
 
@@ -456,7 +465,12 @@ public class PhysicsController implements Initializable {
                     double mass = Double.parseDouble(parts[2]);
                     double range = Double.parseDouble(parts[3]);
 
-                    ExperimentRecord record = new ExperimentRecord(speed, angle, mass, range);
+                    double maxHeight = 0.0;
+                    if (parts.length == 5) {
+                        maxHeight = Double.parseDouble(parts[4]);
+                    }
+
+                    ExperimentRecord record = new ExperimentRecord(speed, angle, mass, range, maxHeight);
                     savedExperiments.add(record);
                     experimentDisplayList.add(formatExperiment(record));
                 } catch (NumberFormatException e) {
@@ -493,7 +507,7 @@ public class PhysicsController implements Initializable {
         double mass = massSlider.getValue();
         try {
             double angle = Double.parseDouble(angleString);
-            ExperimentRecord record = new ExperimentRecord(speed, angle, mass, landedRange);
+            ExperimentRecord record = new ExperimentRecord(speed, angle, mass, landedRange, maxHeightMeters);
             savedExperiments.add(record);
             experimentDisplayList.add(formatExperiment(record));
             saveExperimentToCsv(record);
@@ -508,18 +522,19 @@ public class PhysicsController implements Initializable {
     }
 
     private String formatExperiment(ExperimentRecord record) {
-        return String.format("Speed: %.1f m/s, Angle: %.1f°, Mass: %.1f kg, Range: %.2f m",
-                record.getSpeed(), record.getAngle(), record.getMass(), record.getLandedRange());
+        return String.format("Speed: %.1f m/s, Angle: %.1f°, Mass: %.1f kg, Range: %.2f m, Max Height: %.2f m",
+                record.getSpeed(), record.getAngle(), record.getMass(), record.getLandedRange(),
+                record.getMaxHeight());
     }
 
     public void saveExperimentToCsv(ExperimentRecord record) {
-        String line = String.format("%.2f,%.2f,%.2f,%.2f\n", record.getSpeed(), record.getAngle(), record.getMass(),
-                record.getLandedRange());
+        String line = String.format("%.2f,%.2f,%.2f,%.2f,%.2f\n", record.getSpeed(), record.getAngle(),
+                record.getMass(), record.getLandedRange(), record.getMaxHeight());
 
         try {
             Path savePath = Path.of(SAVE_FILE);
             if (!Files.exists(savePath)) {
-                Files.writeString(savePath, "speed,angle,mass,range\n");
+                Files.writeString(savePath, "speed,angle,mass,range,maxHeight\n");
             }
             Files.writeString(savePath, line, StandardOpenOption.APPEND);
         } catch (Exception e) {
@@ -536,8 +551,12 @@ public class PhysicsController implements Initializable {
         hasBeenLaunched = false;
         hasBeenAirborne = false;
         trajectoryTrace.clear();
+        maxHeightMeters = 0.0;
         labelDroppedRange.setText("-- m");
         labelHeight.setText("0.00 m");
+        if (labelMaxHeight != null) {
+            labelMaxHeight.setText("0.00 m");
+        }
         labelRange.setText("0.00 m");
     }
 
@@ -550,7 +569,11 @@ public class PhysicsController implements Initializable {
             landedRange = null;
             hasBeenLaunched = true;
             hasBeenAirborne = false;
+            maxHeightMeters = 0.0;
             labelDroppedRange.setText("-- m");
+            if (labelMaxHeight != null) {
+                labelMaxHeight.setText("0.00 m");
+            }
 
             projectileObject.launch(speed, angle);
 
@@ -638,7 +661,16 @@ public class PhysicsController implements Initializable {
         double height = Math.max(0.0, position.y - groundTop - projectileObject.getRadiusMeters());
         double range = Math.max(0.0, position.x - projectileStartX);
 
+        if (hasBeenLaunched && landedRange == null) {
+            if (height > maxHeightMeters) {
+                maxHeightMeters = height;
+            }
+        }
+
         labelHeight.setText(String.format(("%.2f m"), height));
+        if (labelMaxHeight != null) {
+            labelMaxHeight.setText(String.format("%.2f m", maxHeightMeters));
+        }
         labelRange.setText(String.format(("%.2f m"), range));
 
         if (hasBeenLaunched && height > 0.5) {

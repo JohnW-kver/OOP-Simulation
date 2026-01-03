@@ -135,6 +135,8 @@
                <children>
                   <Label text="Height: "></Label>
                   <Label fx:id="labelHeight" text="0.0 m"></Label>
+                  <Label text="Max Height: "></Label>
+                  <Label fx:id="labelMaxHeight" text="0.0 m"></Label>
                   <Label text="Range: "></Label>
                   <Label fx:id="labelRange" text="0.0 m"></Label>
                   <Label text="Dropped Range: "></Label>

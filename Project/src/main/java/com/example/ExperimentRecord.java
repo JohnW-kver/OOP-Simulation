@@ -5,12 +5,22 @@ public class ExperimentRecord {
     private double angle;
     private double mass;
     private double landedRange;
+    private double maxHeight;
 
     public ExperimentRecord(double speed, double angle, double mass, double landedRange) {
         this.speed = speed;
         this.angle = angle;
         this.mass = mass;
         this.landedRange = landedRange;
+        this.maxHeight = 0.0;
+    }
+
+    public ExperimentRecord(double speed, double angle, double mass, double landedRange, double maxHeight) {
+        this.speed = speed;
+        this.angle = angle;
+        this.mass = mass;
+        this.landedRange = landedRange;
+        this.maxHeight = maxHeight;
     }
 
     public double getSpeed() {
@@ -45,4 +55,11 @@ public class ExperimentRecord {
         this.landedRange = landedRange;
     }
 
+    public double getMaxHeight() {
+        return maxHeight;
+    }
+
+    public void setMaxHeight(double maxHeight) {
+        this.maxHeight = maxHeight;
+    }
 }
