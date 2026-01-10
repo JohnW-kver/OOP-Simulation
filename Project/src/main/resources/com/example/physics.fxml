@@ -109,6 +109,26 @@
                      </children>
                   </VBox>
 
+                  <VBox alignment="CENTER" prefHeight="200.0" prefWidth="200.0">
+                     <children>
+                        <Label text="Gravity (m/s²)" />
+                        <Slider fx:id="gravitySlider" majorTickUnit="5.0" max="20.0"
+                           minorTickCount="4"
+                           showTickLabels="true" showTickMarks="true" value="9.8" />
+                        <Label fx:id="gravityLabel" text="9.8 m/s²" />
+                     </children>
+                  </VBox>
+
+                  <VBox alignment="CENTER" prefHeight="200.0" prefWidth="200.0">
+                     <children>
+                        <Label text="Air Resistance (damping)" />
+                        <Slider fx:id="airResistanceSlider" majorTickUnit="1.0" max="5.0"
+                           minorTickCount="4"
+                           showTickLabels="true" showTickMarks="true" value="0.0" />
+                        <Label fx:id="airResistanceLabel" text="0.0" />
+                     </children>
+                  </VBox>
+
                   <VBox alignment="CENTER" spacing="5.0">
                      <children>
                         <Label text="Launch Angle (degrees)" />

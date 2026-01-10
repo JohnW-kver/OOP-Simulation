@@ -39,9 +39,9 @@ public class PhysicsController implements Initializable {
 
     // === PHYSICS CONSTANTS (easy to modify for experimentation) ===
 
-    /** Gravity strength in m/s² (negative because Y+ is up in Dyn4j) */
+    /** Default gravity strength in m/s² (positive magnitude) */
 
-    private static final double GRAVITY = -9.8;
+    private static final double DEFAULT_GRAVITY = 9.8;
 
     /** Ground width in meters */
 
@@ -63,6 +63,12 @@ public class PhysicsController implements Initializable {
 
     private static final double MIN_ANGLE_DEGREES = 0;
     private static final double MAX_ANGLE_DEGREES = 90;
+
+    private static final double MIN_GRAVITY = 0.0;
+    private static final double MAX_GRAVITY = 20.0;
+
+    private static final double MIN_AIR_RESISTANCE = 0.0;
+    private static final double MAX_AIR_RESISTANCE = 5.0;
 
     // === JavaFX COMPONENTS ===
 
@@ -126,6 +132,18 @@ public class PhysicsController implements Initializable {
 
     @FXML
     private Slider massSlider;
+
+    @FXML
+    private Slider gravitySlider;
+
+    @FXML
+    private Label gravityLabel;
+
+    @FXML
+    private Slider airResistanceSlider;
+
+    @FXML
+    private Label airResistanceLabel;
 
     @FXML
     private ComboBox<String> projectileTypeCombo;
@@ -204,7 +222,7 @@ public class PhysicsController implements Initializable {
 
         // Set gravity (pointing downward)
         // In Dyn4j, positive Y is up, so gravity should be negative
-        world.setGravity(new Vector2(0.0, GRAVITY));
+        world.setGravity(new Vector2(0.0, -DEFAULT_GRAVITY));
 
         System.out.println("Physics world created with gravity: " + world.getGravity());
     }
@@ -222,6 +240,7 @@ public class PhysicsController implements Initializable {
         }
 
         projectileObject.setMassKg(massSlider.getValue());
+        applyAirResistanceToProjectile();
         System.out.println("Ground created at position: " + groundObject.getBody().getTransform().getTranslation());
     }
 
@@ -247,12 +266,32 @@ public class PhysicsController implements Initializable {
                         projectileObject.setMassKg(newValue.doubleValue());
                     }
                 });
+
+        if (gravitySlider != null) {
+            gravitySlider.setMin(MIN_GRAVITY);
+            gravitySlider.setMax(MAX_GRAVITY);
+            gravitySlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+                applyGravityFromSlider();
+                updateTheoreticalRangeUI();
+            });
+        }
+
+        if (airResistanceSlider != null) {
+            airResistanceSlider.setMin(MIN_AIR_RESISTANCE);
+            airResistanceSlider.setMax(MAX_AIR_RESISTANCE);
+            airResistanceSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+                applyAirResistanceFromSlider();
+            });
+        }
         resetButton.setOnAction(event -> resetProjectile());
         launchButton.setOnAction(event -> launchProjectile());
         saveButton.setOnAction(event -> saveCurrentExperiment());
         loadButton.setOnAction(event -> loadExperimentsFromFile());
 
         setupAngleValidation();
+
+        applyGravityFromSlider();
+        applyAirResistanceFromSlider();
 
         // Setup sort combo box
         sortByCombo.setItems(FXCollections.observableArrayList("Range", "Speed", "Angle", "Mass"));
@@ -322,14 +361,14 @@ public class PhysicsController implements Initializable {
         try {
             // Always rewrite the file so it matches the current in-app list.
             // Keep a header row for clarity.
-            Files.writeString(savePath, "speed,angle,mass,range,maxHeight\n",
+            Files.writeString(savePath, "speed,angle,mass,range,maxHeight,gravity,airResistance\n",
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
             for (int i = 0; i < savedExperiments.size(); i++) {
                 ExperimentRecord record = savedExperiments.get(i);
-                String line = String.format("%.2f,%.2f,%.2f,%.2f,%.2f\n",
-                        record.getSpeed(), record.getAngle(), record.getMass(), record.getLandedRange(),
-                        record.getMaxHeight());
+                String line = String.format("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", record.getSpeed(),
+                        record.getAngle(), record.getMass(), record.getLandedRange(), record.getMaxHeight(),
+                        record.getGravity(), record.getAirResistance());
                 Files.writeString(savePath, line, StandardOpenOption.APPEND);
             }
         } catch (Exception e) {
@@ -357,6 +396,86 @@ public class PhysicsController implements Initializable {
         updateAngleValidationUI(false);
 
         updateTheoreticalRangeUI();
+    }
+
+    private void applyGravityFromSlider() {
+        double g = DEFAULT_GRAVITY;
+
+        if (gravitySlider != null) {
+            g = gravitySlider.getValue();
+        }
+
+        if (g < MIN_GRAVITY) {
+            g = MIN_GRAVITY;
+        }
+        if (g > MAX_GRAVITY) {
+            g = MAX_GRAVITY;
+        }
+
+        if (gravityLabel != null) {
+            gravityLabel.setText(String.format("%.1f m/s²", g));
+        }
+
+        if (world != null) {
+            world.setGravity(new Vector2(0.0, -g));
+        }
+    }
+
+    private void applyAirResistanceFromSlider() {
+        double damping = 0.0;
+
+        if (airResistanceSlider != null) {
+            damping = airResistanceSlider.getValue();
+        }
+
+        if (damping < MIN_AIR_RESISTANCE) {
+            damping = MIN_AIR_RESISTANCE;
+        }
+        if (damping > MAX_AIR_RESISTANCE) {
+            damping = MAX_AIR_RESISTANCE;
+        }
+
+        if (airResistanceLabel != null) {
+            airResistanceLabel.setText(String.format("%.1f", damping));
+        }
+
+        applyAirResistanceToProjectile();
+    }
+
+    private void applyAirResistanceToProjectile() {
+        if (projectileObject == null) {
+            return;
+        }
+        if (projectileObject.getBody() == null) {
+            return;
+        }
+
+        double damping = 0.0;
+        if (airResistanceSlider != null) {
+            damping = airResistanceSlider.getValue();
+        }
+        if (damping < MIN_AIR_RESISTANCE) {
+            damping = MIN_AIR_RESISTANCE;
+        }
+        if (damping > MAX_AIR_RESISTANCE) {
+            damping = MAX_AIR_RESISTANCE;
+        }
+
+        projectileObject.getBody().setLinearDamping(damping);
+        projectileObject.getBody().setAtRest(false);
+    }
+
+    private double getCurrentGravityMagnitude() {
+        if (world == null) {
+            return DEFAULT_GRAVITY;
+        }
+
+        Vector2 g = world.getGravity();
+        if (g == null) {
+            return DEFAULT_GRAVITY;
+        }
+
+        return Math.abs(g.y);
     }
 
     private void updateAngleValidationUI(boolean showAlert) {
@@ -390,7 +509,7 @@ public class PhysicsController implements Initializable {
     }
 
     private double computeTheoreticalRangeMeters(double speedMetersPerSecond, double angleDegrees) {
-        double g = Math.abs(GRAVITY);
+        double g = getCurrentGravityMagnitude();
         if (g <= 0) {
             return 0.0;
         }
@@ -473,6 +592,7 @@ public class PhysicsController implements Initializable {
 
         projectileObject.addToWorld(world);
         projectileObject.setMassKg(massSlider.getValue());
+        applyAirResistanceToProjectile();
         simObjects.add(projectileObject);
 
         resetProjectile();
@@ -485,6 +605,15 @@ public class PhysicsController implements Initializable {
         hasBeenAirborne = false;
         trajectoryTrace.clear();
         maxHeightMeters = record.getMaxHeight();
+
+        if (gravitySlider != null) {
+            gravitySlider.setValue(record.getGravity());
+        }
+        if (airResistanceSlider != null) {
+            airResistanceSlider.setValue(record.getAirResistance());
+        }
+        applyGravityFromSlider();
+        applyAirResistanceFromSlider();
 
         lastLaunchSpeed = record.getSpeed();
         lastLaunchAngle = record.getAngle();
@@ -535,7 +664,7 @@ public class PhysicsController implements Initializable {
                     continue;
                 }
                 String[] parts = line.split(",");
-                if (parts.length != 4 && parts.length != 5) {
+                if (parts.length != 4 && parts.length != 5 && parts.length != 6 && parts.length != 7) {
                     continue;
                 }
 
@@ -546,11 +675,21 @@ public class PhysicsController implements Initializable {
                     double range = Double.parseDouble(parts[3]);
 
                     double maxHeight = 0.0;
-                    if (parts.length == 5) {
+                    if (parts.length >= 5) {
                         maxHeight = Double.parseDouble(parts[4]);
                     }
 
-                    ExperimentRecord record = new ExperimentRecord(speed, angle, mass, range, maxHeight);
+                    double gravity = DEFAULT_GRAVITY;
+                    double airResistance = 0.0;
+                    if (parts.length >= 6) {
+                        gravity = Double.parseDouble(parts[5]);
+                    }
+                    if (parts.length >= 7) {
+                        airResistance = Double.parseDouble(parts[6]);
+                    }
+
+                    ExperimentRecord record = new ExperimentRecord(speed, angle, mass, range, maxHeight, gravity,
+                            airResistance);
                     savedExperiments.add(record);
                     experimentDisplayList.add(formatExperiment(record));
                 } catch (NumberFormatException e) {
@@ -587,7 +726,14 @@ public class PhysicsController implements Initializable {
         double mass = massSlider.getValue();
         try {
             double angle = Double.parseDouble(angleString);
-            ExperimentRecord record = new ExperimentRecord(speed, angle, mass, landedRange, maxHeightMeters);
+            double gravity = getCurrentGravityMagnitude();
+            double airResistance = 0.0;
+            if (airResistanceSlider != null) {
+                airResistance = airResistanceSlider.getValue();
+            }
+
+            ExperimentRecord record = new ExperimentRecord(speed, angle, mass, landedRange, maxHeightMeters, gravity,
+                    airResistance);
             savedExperiments.add(record);
             experimentDisplayList.add(formatExperiment(record));
             saveExperimentToCsv(record);
@@ -602,19 +748,21 @@ public class PhysicsController implements Initializable {
     }
 
     private String formatExperiment(ExperimentRecord record) {
-        return String.format("Speed: %.1f m/s, Angle: %.1f°, Mass: %.1f kg, Range: %.2f m, Max Height: %.2f m",
-                record.getSpeed(), record.getAngle(), record.getMass(), record.getLandedRange(),
-                record.getMaxHeight());
+        return String.format(
+                "Speed: %.1f m/s, Angle: %.1f°, Mass: %.1f kg, Range: %.2f m, Max Height: %.2f m, g: %.1f, air: %.1f",
+                record.getSpeed(), record.getAngle(), record.getMass(), record.getLandedRange(), record.getMaxHeight(),
+                record.getGravity(), record.getAirResistance());
     }
 
     public void saveExperimentToCsv(ExperimentRecord record) {
-        String line = String.format("%.2f,%.2f,%.2f,%.2f,%.2f\n", record.getSpeed(), record.getAngle(),
-                record.getMass(), record.getLandedRange(), record.getMaxHeight());
+        String line = String.format("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", record.getSpeed(), record.getAngle(),
+                record.getMass(), record.getLandedRange(), record.getMaxHeight(), record.getGravity(),
+                record.getAirResistance());
 
         try {
             Path savePath = Path.of(SAVE_FILE);
             if (!Files.exists(savePath)) {
-                Files.writeString(savePath, "speed,angle,mass,range,maxHeight\n");
+                Files.writeString(savePath, "speed,angle,mass,range,maxHeight,gravity,airResistance\n");
             }
             Files.writeString(savePath, line, StandardOpenOption.APPEND);
         } catch (Exception e) {
