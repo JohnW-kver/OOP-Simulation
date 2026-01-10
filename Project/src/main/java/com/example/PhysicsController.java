@@ -279,11 +279,6 @@ public class PhysicsController implements Initializable {
         experimentListView.setItems(experimentDisplayList);
     }
 
-    private void updateTheoreticalRangeUI() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateTheoreticalRangeUI'");
-    }
-
     private void deleteSelectedExperiment() {
         if (savedExperiments.isEmpty()) {
             Alert alert = new Alert(AlertType.INFORMATION);
@@ -360,6 +355,7 @@ public class PhysicsController implements Initializable {
 
         angleField.textProperty().addListener((obs, oldValue, newValue) -> updateAngleValidationUI(false));
         updateAngleValidationUI(false);
+
         updateTheoreticalRangeUI();
     }
 
@@ -377,6 +373,8 @@ public class PhysicsController implements Initializable {
             launchButton.setDisable(!valid);
         }
         if (saveButton != null) {
+            // You can only save after landing anyway, but this prevents saving with a bad
+            // edited angle.
             saveButton.setDisable(!valid);
         }
 
@@ -389,6 +387,54 @@ public class PhysicsController implements Initializable {
         }
 
         updateTheoreticalRangeUI();
+    }
+
+    private double computeTheoreticalRangeMeters(double speedMetersPerSecond, double angleDegrees) {
+        double g = Math.abs(GRAVITY);
+        if (g <= 0) {
+            return 0.0;
+        }
+
+        double angleRadians = Math.toRadians(angleDegrees);
+        double range = (speedMetersPerSecond * speedMetersPerSecond * Math.sin(2.0 * angleRadians)) / g;
+        return Math.max(0.0, range);
+    }
+
+    private void updateTheoreticalRangeUI() {
+        double range = 0.0;
+
+        if (hasBeenLaunched && lastLaunchSpeed != null && lastLaunchAngle != null) {
+            range = theoreticalRangeMeters;
+        } else {
+            String validationMessage = validateAngleText(angleField.getText());
+            if (validationMessage == null) {
+                try {
+                    double speed = speedSlider.getValue();
+                    double angle = Double.parseDouble(angleField.getText().trim());
+                    range = computeTheoreticalRangeMeters(speed, angle);
+                } catch (NumberFormatException e) {
+                    range = 0.0;
+                }
+            }
+        }
+
+        if (labelTheoreticalRange != null) {
+            labelTheoreticalRange.setText(String.format("%.2f m", range));
+        }
+
+        if (labelRangeDifference != null) {
+            if (landedRange == null) {
+                labelRangeDifference.setText("--");
+            } else {
+                double diff = landedRange.doubleValue() - range;
+                if (range > 0.0001) {
+                    double percent = (diff / range) * 100.0;
+                    labelRangeDifference.setText(String.format("%.2f m (%.1f%%)", diff, percent));
+                } else {
+                    labelRangeDifference.setText(String.format("%.2f m", diff));
+                }
+            }
+        }
     }
 
     private String validateAngleText(String rawText) {
@@ -454,11 +500,19 @@ public class PhysicsController implements Initializable {
             labelMaxHeight.setText(String.format("%.2f m", record.getMaxHeight()));
         }
         labelRange.setText("0.00 m");
-    }
 
-    private double computeTheoreticalRangeMeters(double speed, double angle) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'computeTheoreticalRangeMeters'");
+        if (labelTheoreticalRange != null) {
+            labelTheoreticalRange.setText(String.format("%.2f m", theoreticalRangeMeters));
+        }
+        if (labelRangeDifference != null) {
+            double diff = record.getLandedRange() - theoreticalRangeMeters;
+            if (theoreticalRangeMeters > 0.0001) {
+                double percent = (diff / theoreticalRangeMeters) * 100.0;
+                labelRangeDifference.setText(String.format("%.2f m (%.1f%%)", diff, percent));
+            } else {
+                labelRangeDifference.setText(String.format("%.2f m", diff));
+            }
+        }
     }
 
     private void loadExperimentsFromFile() {
@@ -578,12 +632,19 @@ public class PhysicsController implements Initializable {
         hasBeenAirborne = false;
         trajectoryTrace.clear();
         maxHeightMeters = 0.0;
+
+        lastLaunchSpeed = null;
+        lastLaunchAngle = null;
+        theoreticalRangeMeters = 0.0;
+
         labelDroppedRange.setText("-- m");
         labelHeight.setText("0.00 m");
         if (labelMaxHeight != null) {
             labelMaxHeight.setText("0.00 m");
         }
         labelRange.setText("0.00 m");
+
+        updateTheoreticalRangeUI();
     }
 
     private void launchProjectile() {
@@ -596,9 +657,21 @@ public class PhysicsController implements Initializable {
             hasBeenLaunched = true;
             hasBeenAirborne = false;
             maxHeightMeters = 0.0;
+
+            lastLaunchSpeed = speed;
+            lastLaunchAngle = angle;
+            theoreticalRangeMeters = computeTheoreticalRangeMeters(speed, angle);
+
             labelDroppedRange.setText("-- m");
             if (labelMaxHeight != null) {
                 labelMaxHeight.setText("0.00 m");
+            }
+
+            if (labelTheoreticalRange != null) {
+                labelTheoreticalRange.setText(String.format("%.2f m", theoreticalRangeMeters));
+            }
+            if (labelRangeDifference != null) {
+                labelRangeDifference.setText("--");
             }
 
             projectileObject.launch(speed, angle);
@@ -710,6 +783,8 @@ public class PhysicsController implements Initializable {
         if (landedRange != null) {
             labelDroppedRange.setText(String.format("%.2f m", landedRange));
         }
+
+        updateTheoreticalRangeUI();
     }
 
     private void drawTrajectoryTrace(GraphicsContext gc) {
