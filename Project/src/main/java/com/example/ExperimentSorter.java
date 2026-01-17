@@ -8,6 +8,9 @@ public class ExperimentSorter {
     public static final int SORT_BY_SPEED = 1;
     public static final int SORT_BY_ANGLE = 2;
     public static final int SORT_BY_MASS = 3;
+    public static final int SORT_BY_GRAVITY = 4;
+    public static final int SORT_BY_AIR_RESISTANCE = 5;
+    public static final int SORT_BY_THEORETICAL_RANGE = 6;
 
     public static List<ExperimentRecord> mergeSort(List<ExperimentRecord> experiments, int sortBy) {
         // Base case: list of 0 or 1 elements is already sorted
@@ -81,17 +84,48 @@ public class ExperimentSorter {
     }
 
     private static double getValue(ExperimentRecord record, int sortBy) {
+        if (record == null) {
+            return 0.0;
+        }
+
         if (sortBy == SORT_BY_RANGE) {
             return record.getLandedRange();
-        } else if (sortBy == SORT_BY_SPEED) {
-            return record.getSpeed();
-        } else if (sortBy == SORT_BY_ANGLE) {
-            return record.getAngle();
-        } else if (sortBy == SORT_BY_MASS) {
-            return record.getMass();
-        } else {
-            return record.getLandedRange(); // Default to range
         }
+        if (sortBy == SORT_BY_SPEED) {
+            return record.getSpeed();
+        }
+        if (sortBy == SORT_BY_ANGLE) {
+            return record.getAngle();
+        }
+        if (sortBy == SORT_BY_MASS) {
+            return record.getMass();
+        }
+        if (sortBy == SORT_BY_GRAVITY) {
+            return record.getGravity();
+        }
+        if (sortBy == SORT_BY_AIR_RESISTANCE) {
+            return record.getAirResistance();
+        }
+        if (sortBy == SORT_BY_THEORETICAL_RANGE) {
+            return computeTheoreticalRange(record);
+        }
+
+        return record.getLandedRange(); // Default to range
+    }
+
+    private static double computeTheoreticalRange(ExperimentRecord record) {
+        double g = record.getGravity();
+        if (g <= 0.0) {
+            return 0.0;
+        }
+
+        double speed = record.getSpeed();
+        double angleRadians = Math.toRadians(record.getAngle());
+        double range = (speed * speed * Math.sin(2.0 * angleRadians)) / g;
+        if (Double.isNaN(range) || Double.isInfinite(range)) {
+            return 0.0;
+        }
+        return Math.max(0.0, range);
     }
 
     public static int binarySearchByRange(List<ExperimentRecord> experiments,
@@ -122,7 +156,11 @@ public class ExperimentSorter {
     }
 
     public static int binarySearchClosest(List<ExperimentRecord> experiments, double targetRange) {
-        if (experiments.isEmpty()) {
+        return binarySearchClosestBy(experiments, targetRange, SORT_BY_RANGE);
+    }
+
+    public static int binarySearchClosestBy(List<ExperimentRecord> experiments, double targetValue, int sortBy) {
+        if (experiments == null || experiments.isEmpty()) {
             return -1;
         }
 
@@ -130,23 +168,23 @@ public class ExperimentSorter {
         int right = experiments.size() - 1;
 
         // Handle edge cases
-        if (targetRange <= experiments.get(left).getLandedRange()) {
+        if (targetValue <= getValue(experiments.get(left), sortBy)) {
             return left;
         }
-        if (targetRange >= experiments.get(right).getLandedRange()) {
+        if (targetValue >= getValue(experiments.get(right), sortBy)) {
             return right;
         }
 
         // Binary search
         while (left <= right) {
             int middle = (left + right) / 2;
-            double currentRange = experiments.get(middle).getLandedRange();
+            double currentValue = getValue(experiments.get(middle), sortBy);
 
-            if (currentRange == targetRange) {
+            if (currentValue == targetValue) {
                 return middle;
             }
 
-            if (targetRange < currentRange) {
+            if (targetValue < currentValue) {
                 right = middle - 1;
             } else {
                 left = middle + 1;
@@ -154,7 +192,6 @@ public class ExperimentSorter {
         }
 
         // After loop, left is the insertion point
-        // Compare neighbors to find closest
         if (left >= experiments.size()) {
             return experiments.size() - 1;
         }
@@ -162,14 +199,13 @@ public class ExperimentSorter {
             return 0;
         }
 
-        double leftDiff = Math.abs(experiments.get(left - 1).getLandedRange() - targetRange);
-        double rightDiff = Math.abs(experiments.get(left).getLandedRange() - targetRange);
+        double leftDiff = Math.abs(getValue(experiments.get(left - 1), sortBy) - targetValue);
+        double rightDiff = Math.abs(getValue(experiments.get(left), sortBy) - targetValue);
 
         if (leftDiff <= rightDiff) {
             return left - 1;
-        } else {
-            return left;
         }
+        return left;
     }
 
     public static List<ExperimentRecord> findExperimentsAboveRange(

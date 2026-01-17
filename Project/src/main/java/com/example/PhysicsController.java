@@ -294,7 +294,9 @@ public class PhysicsController implements Initializable {
         applyAirResistanceFromSlider();
 
         // Setup sort combo box
-        sortByCombo.setItems(FXCollections.observableArrayList("Range", "Speed", "Angle", "Mass"));
+        sortByCombo.setItems(
+                FXCollections.observableArrayList("Range", "Speed", "Angle", "Mass", "Gravity", "Air Resistance",
+                        "Theoretical Range"));
         sortByCombo.getSelectionModel().select("Range");
         sortButton.setOnAction(event -> sortExperiments());
         searchButton.setOnAction(event -> searchExperimentByRange());
@@ -984,6 +986,12 @@ public class PhysicsController implements Initializable {
             sortBy = ExperimentSorter.SORT_BY_ANGLE;
         } else if ("Mass".equals(sortByString)) {
             sortBy = ExperimentSorter.SORT_BY_MASS;
+        } else if ("Gravity".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_GRAVITY;
+        } else if ("Air Resistance".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_AIR_RESISTANCE;
+        } else if ("Theoretical Range".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_THEORETICAL_RANGE;
         }
 
         // Convert ObservableList to regular ArrayList for sorting
@@ -1027,30 +1035,46 @@ public class PhysicsController implements Initializable {
             Alert alert = new Alert(AlertType.WARNING);
             alert.setTitle("Invalid Input");
             alert.setHeaderText(null);
-            alert.setContentText("Please enter a range value to search for.");
+            alert.setContentText("Please enter a value to search for.");
             alert.showAndWait();
             return;
         }
 
-        double targetRange;
+        double targetValue;
         try {
-            targetRange = Double.parseDouble(searchText);
+            targetValue = Double.parseDouble(searchText);
         } catch (NumberFormatException e) {
             Alert alert = new Alert(AlertType.ERROR);
             alert.setTitle("Invalid Number");
             alert.setHeaderText(null);
-            alert.setContentText("Please enter a valid number for the range.");
+            alert.setContentText("Please enter a valid number.");
             alert.showAndWait();
             return;
         }
 
-        // First, sort the list by range (binary search requires sorted data)
+        String sortByString = sortByCombo.getValue();
+        int sortBy = ExperimentSorter.SORT_BY_RANGE;
+        if ("Speed".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_SPEED;
+        } else if ("Angle".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_ANGLE;
+        } else if ("Mass".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_MASS;
+        } else if ("Gravity".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_GRAVITY;
+        } else if ("Air Resistance".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_AIR_RESISTANCE;
+        } else if ("Theoretical Range".equals(sortByString)) {
+            sortBy = ExperimentSorter.SORT_BY_THEORETICAL_RANGE;
+        }
+
+        // Binary search requires sorted data: sort by the chosen field first
         ArrayList<ExperimentRecord> listToSort = new ArrayList<ExperimentRecord>();
         for (int i = 0; i < savedExperiments.size(); i++) {
             listToSort.add(savedExperiments.get(i));
         }
 
-        List<ExperimentRecord> sortedList = ExperimentSorter.mergeSort(listToSort, ExperimentSorter.SORT_BY_RANGE);
+        List<ExperimentRecord> sortedList = ExperimentSorter.mergeSort(listToSort, sortBy);
 
         // Update the display to show sorted list
         savedExperiments.clear();
@@ -1062,7 +1086,7 @@ public class PhysicsController implements Initializable {
         }
 
         // Perform binary search to find closest match
-        int foundIndex = ExperimentSorter.binarySearchClosest(sortedList, targetRange);
+        int foundIndex = ExperimentSorter.binarySearchClosestBy(sortedList, targetValue, sortBy);
 
         if (foundIndex >= 0 && foundIndex < savedExperiments.size()) {
             // Select the found item in the list view
@@ -1074,10 +1098,11 @@ public class PhysicsController implements Initializable {
             alert.setTitle("Search Result");
             alert.setHeaderText("Found closest match using Binary Search");
             alert.setContentText(String.format(
-                    "Target range: %.2f m\n" +
-                            "Found experiment with range: %.2f m\n" +
-                            "(List sorted by range for binary search)",
-                    targetRange, found.getLandedRange()));
+                    "Search by: %s\n" +
+                            "Target: %.2f\n" +
+                            "Found experiment (closest).\n" +
+                            "(List sorted by %s for binary search)",
+                    sortByString, targetValue, sortByString));
             alert.showAndWait();
         } else {
             Alert alert = new Alert(AlertType.INFORMATION);
