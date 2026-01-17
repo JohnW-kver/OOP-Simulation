@@ -40,6 +40,7 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.control.ListView?>
 
@@ -49,7 +50,7 @@
       <Canvas fx:id="canvas" height="600.0" width="800.0" />
    </center>
    <right>
-      <VBox alignment="TOP_CENTER" spacing="10.0" style="-fx-padding: 10px;">
+      <VBox alignment="TOP_CENTER" prefWidth="300.0" spacing="10.0" style="-fx-padding: 10px;">
          <children>
             <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Saved Experiments" />
             <HBox alignment="CENTER" spacing="5.0">
@@ -82,89 +83,107 @@
             <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="DynSim Projectile Lab" />
             <Label text="Adjust the controls below and click Launch to fire a projectile!" />
 
-            <HBox alignment="CENTER" spacing="20.0" style="-fx-padding: 10px;">
+            <GridPane alignment="CENTER" hgap="30.0" vgap="10.0" style="-fx-padding: 10px;">
                <children>
-                  <VBox alignment="CENTER" spacing="5.0">
+                  <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="0"
+                     GridPane.rowIndex="0">
                      <children>
                         <Label text="Projectile" />
                         <ComboBox fx:id="projectileTypeCombo" prefWidth="140.0" />
                      </children>
                   </VBox>
 
-                  <VBox alignment="CENTER" prefHeight="200.0" prefWidth="200.0">
+                  <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="1"
+                     GridPane.rowIndex="0">
                      <children>
                         <Label text="Mass (kg)" />
                         <Slider fx:id="massSlider" majorTickUnit="1.0" max="5.0" minorTickCount="5"
-                           showTickLabels="true" showTickMarks="true" value="2.5" />
+                           prefWidth="180.0" showTickLabels="true" showTickMarks="true" value="2.5" />
                         <Label fx:id="massLabel" text="2.5 kg" />
                      </children>
                   </VBox>
-                  <VBox alignment="CENTER" spacing="5.0">
+
+                  <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="2"
+                     GridPane.rowIndex="0">
                      <children>
                         <Label text="Initial Speed (m/s)" />
                         <Slider fx:id="speedSlider" majorTickUnit="10.0" max="30.0"
-                           minorTickCount="5" prefWidth="200.0" showTickLabels="true"
-                           showTickMarks="true" value="15.0" />
+                           minorTickCount="5"
+                           prefWidth="180.0" showTickLabels="true" showTickMarks="true" value="15.0" />
                         <Label fx:id="speedLabel" text="15.0 m/s" />
                      </children>
                   </VBox>
 
-                  <VBox alignment="CENTER" prefHeight="200.0" prefWidth="200.0">
+                  <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="3"
+                     GridPane.rowIndex="0">
                      <children>
                         <Label text="Gravity (m/s²)" />
                         <Slider fx:id="gravitySlider" majorTickUnit="5.0" max="20.0"
                            minorTickCount="4"
-                           showTickLabels="true" showTickMarks="true" value="9.8" />
+                           prefWidth="180.0" showTickLabels="true" showTickMarks="true" value="9.8" />
                         <Label fx:id="gravityLabel" text="9.8 m/s²" />
                      </children>
                   </VBox>
 
-                  <VBox alignment="CENTER" prefHeight="200.0" prefWidth="200.0">
+                  <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="0"
+                     GridPane.rowIndex="1">
                      <children>
                         <Label text="Air Resistance (damping)" />
                         <Slider fx:id="airResistanceSlider" majorTickUnit="1.0" max="5.0"
                            minorTickCount="4"
-                           showTickLabels="true" showTickMarks="true" value="0.0" />
+                           prefWidth="180.0" showTickLabels="true" showTickMarks="true" value="0.0" />
                         <Label fx:id="airResistanceLabel" text="0.0" />
                      </children>
                   </VBox>
 
-                  <VBox alignment="CENTER" spacing="5.0">
+                  <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="1"
+                     GridPane.rowIndex="1">
                      <children>
                         <Label text="Launch Angle (degrees)" />
                         <TextField fx:id="angleField" prefWidth="100.0" text="45" />
                         <Label fx:id="angleErrorLabel" managed="false"
-                           style="-fx-text-fill: #b00020;" text="" visible="false" wrapText="true" />
+                           style="-fx-text-fill: #b00020;"
+                           text="" visible="false" wrapText="true" />
                      </children>
                   </VBox>
 
-                  <VBox alignment="CENTER" spacing="5.0">
+                  <VBox alignment="CENTER" spacing="6.0" GridPane.columnIndex="2"
+                     GridPane.rowIndex="1">
                      <children>
-                        <Button fx:id="launchButton" prefWidth="80.0"
+                        <Button fx:id="launchButton" prefWidth="90.0"
                            style="-fx-font-size: 14px; -fx-font-weight: bold;" text="Launch" />
-                        <Button fx:id="resetButton" prefWidth="80.0" text="Reset" />
-                        <Button fx:id="saveButton" prefWidth="80.0"
-                           text="Save" />
-                        <Button fx:id="loadButton" prefWidth="80.0"
-                           text="Load" />
+                        <Button fx:id="resetButton" prefWidth="90.0" text="Reset" />
                      </children>
                   </VBox>
+
+                  <VBox alignment="CENTER" spacing="6.0" GridPane.columnIndex="3"
+                     GridPane.rowIndex="1">
+                     <children>
+                        <Button fx:id="saveButton" prefWidth="90.0" text="Save" />
+                        <Button fx:id="loadButton" prefWidth="90.0" text="Load" />
+                     </children>
+                  </VBox>
+               </children>
+            </GridPane>
+
+            <HBox alignment="CENTER" spacing="20.0">
+               <children>
+                  <Label text="Height:" />
+                  <Label fx:id="labelHeight" text="0.0 m" />
+                  <Label text="Max Height:" />
+                  <Label fx:id="labelMaxHeight" text="0.0 m" />
+                  <Label text="Range:" />
+                  <Label fx:id="labelRange" text="0.0 m" />
+                  <Label text="Theoretical Range:" />
+                  <Label fx:id="labelTheoreticalRange" text="0.0 m" />
                </children>
             </HBox>
             <HBox alignment="CENTER" spacing="20.0">
                <children>
-                  <Label text="Height: "></Label>
-                  <Label fx:id="labelHeight" text="0.0 m"></Label>
-                  <Label text="Max Height: "></Label>
-                  <Label fx:id="labelMaxHeight" text="0.0 m"></Label>
-                  <Label text="Range: "></Label>
-                  <Label fx:id="labelRange" text="0.0 m"></Label>
-                  <Label text="Theoretical Range: "></Label>
-                  <Label fx:id="labelTheoreticalRange" text="0.0 m"></Label>
-                  <Label text="Diff (Actual - Theo): "></Label>
-                  <Label fx:id="labelRangeDifference" text="--"></Label>
-                  <Label text="Dropped Range: "></Label>
-                  <Label fx:id="labelDroppedRange" text="--"></Label>
+                  <Label text="Diff (Actual - Theo):" />
+                  <Label fx:id="labelRangeDifference" text="--" />
+                  <Label text="Dropped Range:" />
+                  <Label fx:id="labelDroppedRange" text="--" />
                </children>
             </HBox>
          </children>
